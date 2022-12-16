@@ -1,0 +1,3 @@
+#!/bin/sh
+
+rm -rf aclocal.m4 config.sub configure depcomp m4 ar-lib compile config.guess config.h install-sh Makefile Makefile.in autom4te.cache config.h.in ltmain.sh missing libtool config.status config.log INSTALL stamp-h1 src/Makefile.in src/.libs src/.deps src/*.o src/Makefile src/libprogbuf.la src/progbuf.lo src/test_progbuf build config.h.in~
