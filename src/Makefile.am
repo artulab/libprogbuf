@@ -3,6 +3,9 @@ libprogbuf_la_SOURCES = progbuf.c
 libprogbuf_la_LDFLAGS = -version-info 0:1:0
 include_HEADERS = progbuf.h
 
-bin_PROGRAMS = test_progbuf
-test_progbuf_SOURCES = test_progbuf.c
-test_progbuf_LDADD = libprogbuf.la
+noinst_PROGRAMS = check_progbuf
+TESTS = check_progbuf
+check_progbuf_SOURCES = check_progbuf.c
+check_progbuf_CFLAGS = $(CFLAGS) $(CHECK_CFLAGS)
+check_progbuf_LDADD = libprogbuf.la $(LDFLAGS) $(CHECK_LIBS)
+check_progbuf_LDFLAGS = -no-install
