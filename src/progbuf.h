@@ -16,6 +16,7 @@ typedef struct progbuf_s *progbuf_h;
 typedef struct progbuf_it_s *progbuf_it_h;
 
 progbuf_h progbuf_alloc (long message_tag);
+progbuf_h progbuf_from_buffer (char *buffer, size_t size);
 
 int progbuf_message_tag (progbuf_h buf, long *message_tag);
 int progbuf_own_buffer (progbuf_h buf, char **buffer, size_t *size);

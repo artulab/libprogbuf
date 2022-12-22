@@ -306,11 +306,119 @@ START_TEST (test_progbuf_write_read_ulonglong)
 }
 END_TEST
 
+START_TEST (test_progbuf_load_from_buffer)
+{
+  int ret;
+  const long tag = -11;
+
+  progbuf_h buf = progbuf_alloc (tag);
+
+  long p_tag;
+
+  ck_assert (buf);
+
+  ret = progbuf_message_tag (buf, &p_tag);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (tag == p_tag);
+
+  long val = -0xFF;
+  long p_val = val;
+
+  ret = progbuf_set_long (buf, p_val);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+
+  ret = progbuf_buffer_size (buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (size == 4);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  ret = progbuf_get_long (iter, &p_val);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (val == p_val);
+
+  struct progbuf_it_s *iter_internal = iter;
+
+  ck_assert (iter_internal->read_pos == 4);
+
+  char *buffer;
+  progbuf_own_buffer (buf, &buffer, &size);
+
+  ck_assert (buffer);
+  ck_assert (size == 4);
+
+  progbuf_h buf_2 = progbuf_from_buffer (buffer, size);
+
+  ck_assert (buf_2);
+
+  ret = progbuf_buffer_size (buf_2, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (size == 4);
+
+  ret = progbuf_message_tag (buf_2, &p_tag);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (tag == p_tag);
+
+  progbuf_it_h iter2 = progbuf_iter_alloc (buf_2);
+
+  ck_assert (iter2);
+
+  ret = progbuf_get_long (iter2, &p_val);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (val == p_val);
+
+  iter_internal = iter2;
+
+  ck_assert (iter_internal->read_pos == 4);
+
+  val = 0xFF;
+  p_val = val;
+
+  ret = progbuf_set_long (buf_2, p_val);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_get_long (iter2, &p_val);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (val == p_val);
+
+  ck_assert (iter_internal->read_pos == 7);
+
+  ret = progbuf_get_long (iter2, &p_val);
+  ck_assert (ret == PROGBUF_ERROR_END_OF_ITER);
+
+  ret = progbuf_buffer_size (buf_2, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (size == 7);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_iter_free (iter2);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf_2);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+END_TEST
+
 static Suite *
 progbuf_suite (void)
 {
   Suite *s;
-  TCase *tc_basic, *tc_long, *tc_longlong;
+  TCase *tc_basic, *tc_long, *tc_longlong, *tc_load;
 
   s = suite_create ("progbuf test suite");
 
@@ -330,9 +438,14 @@ progbuf_suite (void)
   tcase_add_test (tc_longlong, test_progbuf_write_read_negative_longlong);
   tcase_add_test (tc_longlong, test_progbuf_write_read_ulonglong);
 
+  tc_load = tcase_create ("load_from_buffer");
+
+  tcase_add_test (tc_load, test_progbuf_load_from_buffer);
+
   suite_add_tcase (s, tc_basic);
   suite_add_tcase (s, tc_long);
   suite_add_tcase (s, tc_longlong);
+  suite_add_tcase (s, tc_load);
 
   return s;
 }

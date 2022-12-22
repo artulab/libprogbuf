@@ -234,6 +234,47 @@ progbuf_alloc (long message_tag)
   return buf;
 }
 
+progbuf_h
+progbuf_from_buffer (char *buffer, size_t size)
+{
+  if (!buffer || size == 0)
+    return 0;
+
+  ulong u_value;
+  int negative;
+
+  struct progbuf_s *buf = malloc (sizeof (struct progbuf_s));
+  buf->buffer = buffer;
+
+  struct progbuf_it_s iter;
+  iter.buf = buf;
+  iter.read_pos = 0;
+
+  if (read_var_ulong (&iter, &u_value, &negative) != 0)
+    {
+      free (buf);
+      return 0;
+    }
+
+  buf->message_tag = (negative ? -u_value : u_value);
+  buf->header_size = determine_var_ulong_size (ABS (buf->message_tag));
+
+  buf->size = size;
+  buf->capacity = size;
+
+  /* update buffer with the new address */
+  buf->buffer = malloc (size);
+  if (!buf->buffer)
+    {
+      free (buf);
+      return 0;
+    }
+
+  memcpy (buf->buffer, buffer, size);
+
+  return buf;
+}
+
 progbuf_it_h
 progbuf_iter_alloc (progbuf_h buf)
 {
