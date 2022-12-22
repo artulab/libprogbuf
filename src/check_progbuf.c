@@ -1,4 +1,5 @@
 #include <check.h>
+#include <float.h>
 #include <stdlib.h>
 
 #include "common.h"
@@ -414,38 +415,121 @@ START_TEST (test_progbuf_load_from_buffer)
 }
 END_TEST
 
+START_TEST (test_progbuf_write_read_float)
+{
+  int ret;
+
+  progbuf_h buf = progbuf_alloc (1);
+
+  ck_assert (buf);
+
+  float val = FLT_MAX;
+  float p_val = val;
+
+  ret = progbuf_set_float (buf, p_val);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+  ret = progbuf_buffer_size (buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (size == 6);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  ret = progbuf_get_float (iter, &p_val);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (val == p_val);
+
+  struct progbuf_it_s *iter_internal = iter;
+
+  ck_assert (iter_internal->read_pos == 6);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+
+START_TEST (test_progbuf_write_read_double)
+{
+  int ret;
+
+  progbuf_h buf = progbuf_alloc (1);
+
+  ck_assert (buf);
+
+  double val = DBL_MAX;
+  double p_val = val;
+
+  ret = progbuf_set_double (buf, p_val);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+  ret = progbuf_buffer_size (buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (size == 10);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  ret = progbuf_get_double (iter, &p_val);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (val == p_val);
+
+  struct progbuf_it_s *iter_internal = iter;
+
+  ck_assert (iter_internal->read_pos == 10);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+
 static Suite *
 progbuf_suite (void)
 {
   Suite *s;
-  TCase *tc_basic, *tc_long, *tc_longlong, *tc_load;
+  TCase *tc_basic, *tc_long, *tc_longlong, *tc_load, *tc_float;
 
   s = suite_create ("progbuf test suite");
 
   tc_basic = tcase_create ("basic");
-
   tcase_add_test (tc_basic, test_progbuf_alloc_version);
 
   tc_long = tcase_create ("encode_long");
-
   tcase_add_test (tc_long, test_progbuf_write_read_positive_long);
   tcase_add_test (tc_long, test_progbuf_write_read_negative_long);
   tcase_add_test (tc_long, test_progbuf_write_read_ulong);
 
   tc_longlong = tcase_create ("encode_longlong");
-
   tcase_add_test (tc_longlong, test_progbuf_write_read_positive_longlong);
   tcase_add_test (tc_longlong, test_progbuf_write_read_negative_longlong);
   tcase_add_test (tc_longlong, test_progbuf_write_read_ulonglong);
 
   tc_load = tcase_create ("load_from_buffer");
-
   tcase_add_test (tc_load, test_progbuf_load_from_buffer);
+
+  tc_float = tcase_create ("encode_floating_point");
+  tcase_add_test (tc_float, test_progbuf_write_read_float);
+  tcase_add_test (tc_float, test_progbuf_write_read_double);
 
   suite_add_tcase (s, tc_basic);
   suite_add_tcase (s, tc_long);
   suite_add_tcase (s, tc_longlong);
   suite_add_tcase (s, tc_load);
+  suite_add_tcase (s, tc_float);
 
   return s;
 }

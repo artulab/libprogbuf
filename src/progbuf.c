@@ -399,3 +399,103 @@ progbuf_iter_reset (progbuf_it_h iter)
 
   return PROGBUF_SUCCESS;
 }
+
+int
+progbuf_set_float (progbuf_h buf, float value)
+{
+  int ret;
+
+  if (!buf)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  ret = check_buffer_and_expand (buf, 5);
+  if (ret != 0)
+    return ret;
+
+  buf->buffer[buf->size] = PROGBUF_TYPE_FLOAT32;
+  buf->size++;
+
+  memcpy (buf->buffer + buf->size, &value, 4);
+  buf->size += 4;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
+progbuf_get_float (progbuf_it_h iter, float *value)
+{
+  if (!iter || !value)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!iter->buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  if (iter->read_pos >= iter->buf->size)
+    return PROGBUF_ERROR_END_OF_ITER;
+
+  char val_type = iter->buf->buffer[iter->read_pos];
+
+  if ((val_type & PROGBUF_TYPE_FLOAT32) != PROGBUF_TYPE_FLOAT32)
+    return PROGBUF_ERROR_UNEXPECTED_TYPE;
+
+  iter->read_pos++;
+
+  memcpy (value, iter->buf->buffer + iter->read_pos, 4);
+
+  iter->read_pos += 4;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
+progbuf_set_double (progbuf_h buf, double value)
+{
+  int ret;
+
+  if (!buf)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  ret = check_buffer_and_expand (buf, 9);
+  if (ret != 0)
+    return ret;
+
+  buf->buffer[buf->size] = PROGBUF_TYPE_FLOAT64;
+  buf->size++;
+
+  memcpy (buf->buffer + buf->size, &value, 8);
+  buf->size += 8;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
+progbuf_get_double (progbuf_it_h iter, double *value)
+{
+  if (!iter || !value)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!iter->buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  if (iter->read_pos >= iter->buf->size)
+    return PROGBUF_ERROR_END_OF_ITER;
+
+  char val_type = iter->buf->buffer[iter->read_pos];
+
+  if ((val_type & PROGBUF_TYPE_FLOAT64) != PROGBUF_TYPE_FLOAT64)
+    return PROGBUF_ERROR_UNEXPECTED_TYPE;
+
+  iter->read_pos++;
+
+  memcpy (value, iter->buf->buffer + iter->read_pos, 8);
+
+  iter->read_pos += 8;
+
+  return PROGBUF_SUCCESS;
+}
