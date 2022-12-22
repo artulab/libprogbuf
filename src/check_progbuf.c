@@ -9,23 +9,23 @@ START_TEST (test_progbuf_alloc_version)
   int ret;
   long message_tag;
 
-  ret = progbuf_get_message_tag (NULL, &message_tag);
+  ret = progbuf_message_tag (NULL, &message_tag);
   ck_assert (ret == PROGBUF_ERROR_NULL_PARAM);
 
   progbuf_h buf = progbuf_alloc (1);
 
   ck_assert (buf);
 
-  ret = progbuf_get_message_tag (buf, NULL);
+  ret = progbuf_message_tag (buf, NULL);
   ck_assert (ret == PROGBUF_ERROR_NULL_PARAM);
 
-  ret = progbuf_get_message_tag (buf, &message_tag);
+  ret = progbuf_message_tag (buf, &message_tag);
 
   ck_assert (ret == PROGBUF_SUCCESS);
   ck_assert (message_tag == 1);
 
   size_t size;
-  ret = progbuf_get_message_buffer (buf, NULL, &size);
+  ret = progbuf_buffer_size (buf, &size);
 
   ck_assert (ret == PROGBUF_SUCCESS);
 
@@ -51,7 +51,7 @@ parametric_test_progbuf_write_read_long (const long val,
   ck_assert (ret == PROGBUF_SUCCESS);
 
   size_t size;
-  ret = progbuf_get_message_buffer (buf, NULL, &size);
+  ret = progbuf_buffer_size (buf, &size);
 
   ck_assert (ret == PROGBUF_SUCCESS);
 
@@ -131,16 +131,7 @@ START_TEST (test_progbuf_write_read_ulong)
 
   size_t size;
 
-  ret = progbuf_get_message_buffer (NULL, NULL, NULL);
-  ck_assert (ret == PROGBUF_ERROR_NULL_PARAM);
-
-  ret = progbuf_get_message_buffer (NULL, NULL, &size);
-  ck_assert (ret == PROGBUF_ERROR_NULL_PARAM);
-
-  ret = progbuf_get_message_buffer (buf, NULL, NULL);
-  ck_assert (ret == PROGBUF_ERROR_NULL_PARAM);
-
-  ret = progbuf_get_message_buffer (buf, NULL, &size);
+  ret = progbuf_buffer_size (buf, &size);
   ck_assert (ret == PROGBUF_SUCCESS);
 
   ck_assert (size == 1 + 6);
@@ -181,7 +172,7 @@ parametric_test_progbuf_write_read_longlong (const long long val,
   ck_assert (ret == PROGBUF_SUCCESS);
 
   size_t size;
-  ret = progbuf_get_message_buffer (buf, NULL, &size);
+  ret = progbuf_buffer_size (buf, &size);
 
   ck_assert (ret == PROGBUF_SUCCESS);
 
@@ -289,16 +280,7 @@ START_TEST (test_progbuf_write_read_ulonglong)
 
   size_t size;
 
-  ret = progbuf_get_message_buffer (NULL, NULL, NULL);
-  ck_assert (ret == PROGBUF_ERROR_NULL_PARAM);
-
-  ret = progbuf_get_message_buffer (NULL, NULL, &size);
-  ck_assert (ret == PROGBUF_ERROR_NULL_PARAM);
-
-  ret = progbuf_get_message_buffer (buf, NULL, NULL);
-  ck_assert (ret == PROGBUF_ERROR_NULL_PARAM);
-
-  ret = progbuf_get_message_buffer (buf, NULL, &size);
+  ret = progbuf_buffer_size (buf, &size);
   ck_assert (ret == PROGBUF_SUCCESS);
 
   ck_assert (size == 1 + 1 + 10);

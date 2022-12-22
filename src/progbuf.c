@@ -142,6 +142,9 @@ WRITE_VAR_SIZE (ulonglong)
     if (!buf)                                                                 \
       return PROGBUF_ERROR_NULL_PARAM;                                        \
                                                                               \
+    if (!buf->buffer)                                                         \
+      return PROGBUF_ERROR_NOT_OWNING;                                        \
+                                                                              \
     val_size = determine_var_##utype##_size (ABS (value));                    \
     ret = check_buffer_and_expand (buf, val_size + 1);                        \
     if (ret != 0)                                                             \
@@ -160,6 +163,9 @@ WRITE_VAR_SIZE (ulonglong)
   {                                                                           \
     if (!iter || !value)                                                      \
       return PROGBUF_ERROR_NULL_PARAM;                                        \
+                                                                              \
+    if (!iter->buf->buffer)                                                   \
+      return PROGBUF_ERROR_NOT_OWNING;                                        \
                                                                               \
     if (iter->read_pos >= iter->buf->size)                                    \
       return PROGBUF_ERROR_END_OF_ITER;                                       \
@@ -234,6 +240,9 @@ progbuf_iter_alloc (progbuf_h buf)
   if (!buf)
     return 0;
 
+  if (!buf->buffer)
+    return 0;
+
   struct progbuf_it_s *iter = malloc (sizeof (struct progbuf_it_s));
 
   if (!iter)
@@ -251,7 +260,9 @@ progbuf_free (progbuf_h buf)
   if (!buf)
     return PROGBUF_ERROR_NULL_PARAM;
 
-  free (buf->buffer);
+  if (buf->buffer)
+    free (buf->buffer);
+
   free (buf);
 
   return PROGBUF_SUCCESS;
@@ -269,10 +280,13 @@ progbuf_iter_free (progbuf_it_h iter)
 }
 
 int
-progbuf_get_message_tag (progbuf_h buf, long *message_tag)
+progbuf_message_tag (progbuf_h buf, long *message_tag)
 {
   if (!buf || !message_tag)
     return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
 
   *message_tag = buf->message_tag;
 
@@ -280,20 +294,53 @@ progbuf_get_message_tag (progbuf_h buf, long *message_tag)
 }
 
 int
-progbuf_get_message_buffer (progbuf_h buf, char **buffer, size_t *size)
+progbuf_own_buffer (progbuf_h buf, char **buffer, size_t *size)
 {
-  if (!buf || (!buffer && !size))
+  if (!buf || !buffer || !size)
     return PROGBUF_ERROR_NULL_PARAM;
 
-  if (buffer)
-    {
-      *buffer = buf->buffer;
-    }
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
 
-  if (size)
-    {
-      *size = buf->size;
-    }
+  *buffer = buf->buffer;
+  buf->buffer = 0;
+
+  *size = buf->size;
+
+  return 0;
+}
+
+int
+progbuf_copy_buffer (progbuf_h buf, char **buffer, size_t *size)
+{
+  if (!buf || !buffer || !size)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  *buffer = malloc (buf->size);
+
+  if (!*buffer)
+    return PROGBUF_ERROR_MEM_ALLOC;
+
+  memcpy (*buffer, buf->buffer, buf->size);
+
+  *size = buf->size;
+
+  return 0;
+}
+
+int
+progbuf_buffer_size (progbuf_h buf, size_t *size)
+{
+  if (!buf || !size)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  *size = buf->size;
 
   return 0;
 }
@@ -303,6 +350,9 @@ progbuf_iter_reset (progbuf_it_h iter)
 {
   if (!iter)
     return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!iter->buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
 
   iter->read_pos = iter->buf->header_size;
 

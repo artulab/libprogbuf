@@ -10,14 +10,17 @@
 #define PROGBUF_ERROR_UNEXPECTED_TYPE   -4
 #define PROGBUF_ERROR_READ              -5
 #define PROGBUF_ERROR_INCORRECT_SIGN    -6
+#define PROGBUF_ERROR_NOT_OWNING        -7
 
 typedef struct progbuf_s *progbuf_h;
 typedef struct progbuf_it_s *progbuf_it_h;
 
 progbuf_h progbuf_alloc (long message_tag);
 
-int progbuf_get_message_tag (progbuf_h buf, long *message_tag);
-int progbuf_get_message_buffer (progbuf_h buf, char **buffer, size_t *size);
+int progbuf_message_tag (progbuf_h buf, long *message_tag);
+int progbuf_own_buffer (progbuf_h buf, char **buffer, size_t *size);
+int progbuf_copy_buffer (progbuf_h buf, char **buffer, size_t *size);
+int progbuf_buffer_size (progbuf_h buf, size_t *size);
 int progbuf_free (progbuf_h buf);
 
 int progbuf_set_int (progbuf_h buf, int value);
