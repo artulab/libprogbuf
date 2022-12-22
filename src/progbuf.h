@@ -39,11 +39,17 @@ int progbuf_get_longlong (progbuf_it_h iter, long long *value);
 int progbuf_set_ulonglong (progbuf_h buf, unsigned long long value);
 int progbuf_get_ulonglong (progbuf_it_h iter, unsigned long long *value);
 
+int progbuf_set_size_t (progbuf_h buf, size_t value);
+int progbuf_get_size_t (progbuf_it_h iter, size_t *value);
+
 int progbuf_set_float (progbuf_h buf, float value);
 int progbuf_get_float (progbuf_it_h iter, float *value);
 
 int progbuf_set_double (progbuf_h buf, double value);
 int progbuf_get_double (progbuf_it_h iter, double *value);
+
+int progbuf_set_int_array (progbuf_h buf, const int *arr, size_t len);
+int progbuf_get_int_array (progbuf_it_h iter, int **arr, size_t *len);
 
 progbuf_it_h progbuf_iter_alloc (progbuf_h buf);
 int progbuf_iter_free (progbuf_it_h iter);

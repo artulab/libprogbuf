@@ -134,6 +134,10 @@ DETERMINE_VAR_SIZE (ulonglong)
 READ_VAR_SIZE (ulonglong)
 WRITE_VAR_SIZE (ulonglong)
 
+DETERMINE_VAR_SIZE (size_t)
+READ_VAR_SIZE (size_t)
+WRITE_VAR_SIZE (size_t)
+
 #define PROGBUF_SET(type, utype)                                              \
   int progbuf_set_##type (progbuf_h buf, type value)                          \
   {                                                                           \
@@ -158,7 +162,7 @@ WRITE_VAR_SIZE (ulonglong)
     return PROGBUF_SUCCESS;                                                   \
   }
 
-#define PROGBUF_GET(type, utype)                                              \
+#define PROGBUF_GET(type, utype, type_signed)                                 \
   int progbuf_get_##type (progbuf_it_h iter, type *value)                     \
   {                                                                           \
     if (!iter || !value)                                                      \
@@ -185,28 +189,138 @@ WRITE_VAR_SIZE (ulonglong)
         return PROGBUF_ERROR_READ;                                            \
       }                                                                       \
                                                                               \
-    *value = (negative ? -u_value : u_value);                                 \
+    if (type_signed)                                                          \
+      {                                                                       \
+        *value = (negative ? -u_value : u_value);                             \
+      }                                                                       \
+    else                                                                      \
+      {                                                                       \
+        *value = u_value;                                                     \
+      }                                                                       \
                                                                               \
     return PROGBUF_SUCCESS;                                                   \
   }
 
 PROGBUF_SET (int, uint)
-PROGBUF_GET (int, uint)
+PROGBUF_GET (int, uint, 1)
 
 PROGBUF_SET (uint, uint)
-PROGBUF_GET (uint, uint)
+PROGBUF_GET (uint, uint, 0)
 
 PROGBUF_SET (long, ulong)
-PROGBUF_GET (long, ulong)
+PROGBUF_GET (long, ulong, 1)
 
 PROGBUF_SET (ulong, ulong)
-PROGBUF_GET (ulong, ulong)
+PROGBUF_GET (ulong, ulong, 0)
 
 PROGBUF_SET (longlong, ulonglong)
-PROGBUF_GET (longlong, ulonglong)
+PROGBUF_GET (longlong, ulonglong, 1)
 
 PROGBUF_SET (ulonglong, ulonglong)
-PROGBUF_GET (ulonglong, ulonglong)
+PROGBUF_GET (ulonglong, ulonglong, 0)
+
+PROGBUF_SET (size_t, size_t)
+PROGBUF_GET (size_t, size_t, 0)
+
+int
+progbuf_set_int_array (progbuf_h buf, const int *arr, size_t len)
+{
+  int val_size, ret;
+
+  if (!buf || !arr)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  val_size = determine_var_size_t_size (len);
+  ret = check_buffer_and_expand (buf, val_size + 1);
+  if (ret != 0)
+    return ret;
+
+  buf->buffer[buf->size] = PROGBUF_TYPE_VAR_INT_ARRAY;
+  buf->size++;
+
+  write_var_size_t (buf, len, val_size, 0);
+  size_t total_written = 1 + val_size;
+
+  for (size_t i = 0; i < len; ++i)
+    {
+      int value = arr[i];
+      val_size = determine_var_uint_size (ABS (value));
+      ret = check_buffer_and_expand (buf, val_size);
+
+      if (ret != 0)
+        {
+          buf->size -= total_written;
+          return ret;
+        }
+
+      write_var_uint (buf, ABS (value), val_size, value < 0);
+      total_written += val_size;
+    }
+
+  return PROGBUF_SUCCESS;
+}
+
+int
+progbuf_get_int_array (progbuf_it_h iter, int **arr, size_t *len)
+{
+  if (!iter || !arr || !len)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!iter->buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  if (iter->read_pos >= iter->buf->size)
+    return PROGBUF_ERROR_END_OF_ITER;
+
+  char val_type = iter->buf->buffer[iter->read_pos];
+
+  if ((val_type & PROGBUF_TYPE_VAR_INT_ARRAY) != PROGBUF_TYPE_VAR_INT_ARRAY)
+    return PROGBUF_ERROR_UNEXPECTED_TYPE;
+
+  iter->read_pos++;
+
+  size_t u_len;
+  size_t total_read = 1;
+  size_t prev_read_pos = iter->read_pos;
+  int negative;
+  if (read_var_size_t (iter, &u_len, &negative) != 0)
+    {
+      iter->read_pos -= total_read;
+      return PROGBUF_ERROR_READ;
+    }
+
+  total_read += (iter->read_pos - prev_read_pos);
+  int *l_arr = malloc (sizeof (int) * u_len);
+
+  if (!l_arr)
+    {
+      iter->read_pos -= total_read;
+      return PROGBUF_ERROR_MEM_ALLOC;
+    }
+
+  uint u_value;
+  prev_read_pos = iter->read_pos;
+  for (size_t i = 0; i < u_len; ++i)
+    {
+      if (read_var_uint (iter, &u_value, &negative) != 0)
+        {
+          total_read += (iter->read_pos - prev_read_pos);
+          iter->read_pos -= total_read;
+          free (l_arr);
+          return PROGBUF_ERROR_READ;
+        }
+
+      l_arr[i] = (negative ? -u_value : u_value);
+    }
+
+  *arr = l_arr;
+  *len = u_len;
+
+  return PROGBUF_SUCCESS;
+}
 
 progbuf_h
 progbuf_alloc (long message_tag)

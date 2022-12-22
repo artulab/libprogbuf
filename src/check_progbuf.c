@@ -1,5 +1,6 @@
 #include <check.h>
 #include <float.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "common.h"
@@ -497,11 +498,62 @@ START_TEST (test_progbuf_write_read_double)
   ck_assert (ret == PROGBUF_SUCCESS);
 }
 
+START_TEST (test_progbuf_write_read_int_array)
+{
+  progbuf_h buf = progbuf_alloc (1);
+
+  ck_assert (buf);
+
+  const int val[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+  const size_t actual_size = sizeof (val) / sizeof (int);
+
+  int ret = progbuf_set_int_array (buf, val, actual_size);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+
+  ret = progbuf_buffer_size (buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ck_assert (size == 12);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  int *p_val;
+  size_t p_size;
+  ret = progbuf_get_int_array (iter, &p_val, &p_size);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (p_val);
+  ck_assert (p_size == actual_size);
+
+  for (int i = 0; i < actual_size; ++i)
+    {
+      ck_assert (val[i] == p_val[i]);
+    }
+
+  struct progbuf_it_s *iter_internal = iter;
+
+  ck_assert (iter_internal->read_pos == 12);
+
+  free (p_val);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+END_TEST
+
 static Suite *
 progbuf_suite (void)
 {
   Suite *s;
-  TCase *tc_basic, *tc_long, *tc_longlong, *tc_load, *tc_float;
+  TCase *tc_basic, *tc_long, *tc_longlong, *tc_load, *tc_float, *tc_array;
 
   s = suite_create ("progbuf test suite");
 
@@ -525,11 +577,15 @@ progbuf_suite (void)
   tcase_add_test (tc_float, test_progbuf_write_read_float);
   tcase_add_test (tc_float, test_progbuf_write_read_double);
 
+  tc_array = tcase_create ("encode_array");
+  tcase_add_test (tc_array, test_progbuf_write_read_int_array);
+
   suite_add_tcase (s, tc_basic);
   suite_add_tcase (s, tc_long);
   suite_add_tcase (s, tc_longlong);
   suite_add_tcase (s, tc_load);
   suite_add_tcase (s, tc_float);
+  suite_add_tcase (s, tc_array);
 
   return s;
 }
