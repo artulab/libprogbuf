@@ -273,6 +273,61 @@ PROGBUF_GET_UNSIGNED (ulonglong, ulonglong)
 PROGBUF_SET_UNSIGNED (size_t, size_t)
 PROGBUF_GET_UNSIGNED (size_t, size_t)
 
+#define PROGBUF_SET_FLOAT(type, type_enum)                                    \
+  int progbuf_set_##type (progbuf_h buf, type value)                          \
+  {                                                                           \
+    int ret;                                                                  \
+                                                                              \
+    if (!buf)                                                                 \
+      return PROGBUF_ERROR_NULL_PARAM;                                        \
+                                                                              \
+    if (!buf->buffer)                                                         \
+      return PROGBUF_ERROR_NOT_OWNING;                                        \
+                                                                              \
+    ret = check_buffer_and_expand (buf, 1 + sizeof (type));                   \
+    if (ret != 0)                                                             \
+      return ret;                                                             \
+                                                                              \
+    buf->buffer[buf->size] = type_enum;                                       \
+    buf->size++;                                                              \
+                                                                              \
+    memcpy (buf->buffer + buf->size, &value, sizeof (type));                  \
+    buf->size += sizeof (type);                                               \
+                                                                              \
+    return PROGBUF_SUCCESS;                                                   \
+  }
+
+#define PROGBUF_GET_FLOAT(type, type_enum)                                    \
+  int progbuf_get_##type (progbuf_it_h iter, type *value)                     \
+  {                                                                           \
+    if (!iter || !value)                                                      \
+      return PROGBUF_ERROR_NULL_PARAM;                                        \
+                                                                              \
+    if (!iter->buf->buffer)                                                   \
+      return PROGBUF_ERROR_NOT_OWNING;                                        \
+                                                                              \
+    if (iter->read_pos >= iter->buf->size)                                    \
+      return PROGBUF_ERROR_END_OF_ITER;                                       \
+                                                                              \
+    char val_type = iter->buf->buffer[iter->read_pos];                        \
+                                                                              \
+    if ((val_type & type_enum) != type_enum)                                  \
+      return PROGBUF_ERROR_UNEXPECTED_TYPE;                                   \
+                                                                              \
+    iter->read_pos++;                                                         \
+                                                                              \
+    *value = *((type *)(iter->buf->buffer + iter->read_pos));                 \
+    iter->read_pos += sizeof (type);                                          \
+                                                                              \
+    return PROGBUF_SUCCESS;                                                   \
+  }
+
+PROGBUF_GET_FLOAT (float, PROGBUF_TYPE_FLOAT)
+PROGBUF_SET_FLOAT (float, PROGBUF_TYPE_FLOAT)
+
+PROGBUF_GET_FLOAT (double, PROGBUF_TYPE_DOUBLE)
+PROGBUF_SET_FLOAT (double, PROGBUF_TYPE_DOUBLE)
+
 #define PROGBUF_ARRAY_SET_SIGNED(type, utype, type_enum)                      \
   int progbuf_set_##type##_array (progbuf_h buf, const type *arr, size_t len) \
   {                                                                           \
@@ -494,153 +549,84 @@ PROGBUF_ARRAY_GET_UNSIGNED (ulonglong, ulonglong, PROGBUF_TYPE_VAR_INT_ARRAY)
 PROGBUF_ARRAY_SET_UNSIGNED (size_t, size_t, PROGBUF_TYPE_VAR_INT_ARRAY)
 PROGBUF_ARRAY_GET_UNSIGNED (size_t, size_t, PROGBUF_TYPE_VAR_INT_ARRAY)
 
-int
-progbuf_set_float_array (progbuf_h buf, const float *arr, size_t len)
-{
-  int val_size, ret;
+#define PROGBUF_FLOAT_ARRAY_GET(type, type_enum)                              \
+  int progbuf_set_##type##_array (progbuf_h buf, const type *arr, size_t len) \
+  {                                                                           \
+    int val_size, ret;                                                        \
+                                                                              \
+    if (!buf || !arr)                                                         \
+      return PROGBUF_ERROR_NULL_PARAM;                                        \
+                                                                              \
+    if (!buf->buffer)                                                         \
+      return PROGBUF_ERROR_NOT_OWNING;                                        \
+                                                                              \
+    val_size = determine_var_size_t_size (len);                               \
+    const size_t len_bytes = len * sizeof (type);                             \
+    ret = check_buffer_and_expand (buf, 1 + val_size + len_bytes);            \
+    if (ret != 0)                                                             \
+      return ret;                                                             \
+                                                                              \
+    buf->buffer[buf->size] = type_enum;                                       \
+    buf->size++;                                                              \
+                                                                              \
+    write_var_size_t (buf, len, val_size, 0);                                 \
+    memcpy (buf->buffer + buf->size, arr, len_bytes);                         \
+    buf->size += len_bytes;                                                   \
+                                                                              \
+    return PROGBUF_SUCCESS;                                                   \
+  }
 
-  if (!buf || !arr)
-    return PROGBUF_ERROR_NULL_PARAM;
+#define PROGBUF_FLOAT_ARRAY_SET(type, type_enum)                              \
+  int progbuf_get_##type##_array (progbuf_it_h iter, type **arr, size_t *len) \
+  {                                                                           \
+    if (!iter || !arr || !len)                                                \
+      return PROGBUF_ERROR_NULL_PARAM;                                        \
+                                                                              \
+    if (!iter->buf->buffer)                                                   \
+      return PROGBUF_ERROR_NOT_OWNING;                                        \
+                                                                              \
+    if (iter->read_pos >= iter->buf->size)                                    \
+      return PROGBUF_ERROR_END_OF_ITER;                                       \
+                                                                              \
+    char val_type = iter->buf->buffer[iter->read_pos];                        \
+                                                                              \
+    if ((val_type & type_enum) != type_enum)                                  \
+      return PROGBUF_ERROR_UNEXPECTED_TYPE;                                   \
+                                                                              \
+    iter->read_pos++;                                                         \
+                                                                              \
+    size_t u_len;                                                             \
+    size_t prev_read_pos = iter->read_pos;                                    \
+    int negative;                                                             \
+    if (read_var_size_t (iter, &u_len, &negative) != 0)                       \
+      {                                                                       \
+        iter->read_pos--;                                                     \
+        return PROGBUF_ERROR_READ;                                            \
+      }                                                                       \
+                                                                              \
+    const size_t len_bytes = u_len * sizeof (type);                           \
+    type *l_arr = malloc (len_bytes);                                         \
+                                                                              \
+    if (!l_arr)                                                               \
+      {                                                                       \
+        iter->read_pos -= (1 + iter->read_pos - prev_read_pos);               \
+        return PROGBUF_ERROR_MEM_ALLOC;                                       \
+      }                                                                       \
+                                                                              \
+    memcpy (l_arr, iter->buf->buffer + iter->read_pos, len_bytes);            \
+    iter->read_pos += len_bytes;                                              \
+                                                                              \
+    *arr = l_arr;                                                             \
+    *len = u_len;                                                             \
+                                                                              \
+    return PROGBUF_SUCCESS;                                                   \
+  }
 
-  if (!buf->buffer)
-    return PROGBUF_ERROR_NOT_OWNING;
+PROGBUF_FLOAT_ARRAY_GET (float, PROGBUF_TYPE_VAR_FLOAT_ARRAY)
+PROGBUF_FLOAT_ARRAY_SET (float, PROGBUF_TYPE_VAR_FLOAT_ARRAY)
 
-  val_size = determine_var_size_t_size (len);
-  const size_t len_bytes = len * sizeof (float);
-  ret = check_buffer_and_expand (buf, 1 + val_size + len_bytes);
-  if (ret != 0)
-    return ret;
-
-  buf->buffer[buf->size] = PROGBUF_TYPE_VAR_FLOAT32_ARRAY;
-  buf->size++;
-
-  write_var_size_t (buf, len, val_size, 0);
-  memcpy (buf->buffer + buf->size, arr, len_bytes);
-  buf->size += len_bytes;
-
-  return PROGBUF_SUCCESS;
-}
-
-int
-progbuf_get_float_array (progbuf_it_h iter, float **arr, size_t *len)
-{
-  if (!iter || !arr || !len)
-    return PROGBUF_ERROR_NULL_PARAM;
-
-  if (!iter->buf->buffer)
-    return PROGBUF_ERROR_NOT_OWNING;
-
-  if (iter->read_pos >= iter->buf->size)
-    return PROGBUF_ERROR_END_OF_ITER;
-
-  char val_type = iter->buf->buffer[iter->read_pos];
-
-  if ((val_type & PROGBUF_TYPE_VAR_FLOAT32_ARRAY)
-      != PROGBUF_TYPE_VAR_FLOAT32_ARRAY)
-    return PROGBUF_ERROR_UNEXPECTED_TYPE;
-
-  iter->read_pos++;
-
-  size_t u_len;
-  size_t prev_read_pos = iter->read_pos;
-  int negative;
-  if (read_var_size_t (iter, &u_len, &negative) != 0)
-    {
-      iter->read_pos--;
-      return PROGBUF_ERROR_READ;
-    }
-
-  const size_t len_bytes = u_len * sizeof (float);
-  float *l_arr = malloc (len_bytes);
-
-  if (!l_arr)
-    {
-      iter->read_pos -= (1 + iter->read_pos - prev_read_pos);
-      return PROGBUF_ERROR_MEM_ALLOC;
-    }
-
-  memcpy (l_arr, iter->buf->buffer + iter->read_pos, len_bytes);
-  iter->read_pos += len_bytes;
-
-  *arr = l_arr;
-  *len = u_len;
-
-  return PROGBUF_SUCCESS;
-}
-
-int
-progbuf_set_double_array (progbuf_h buf, const double *arr, size_t len)
-{
-  int val_size, ret;
-
-  if (!buf || !arr)
-    return PROGBUF_ERROR_NULL_PARAM;
-
-  if (!buf->buffer)
-    return PROGBUF_ERROR_NOT_OWNING;
-
-  val_size = determine_var_size_t_size (len);
-  const size_t len_bytes = len * sizeof (double);
-  ret = check_buffer_and_expand (buf, 1 + val_size + len_bytes);
-  if (ret != 0)
-    return ret;
-
-  buf->buffer[buf->size] = PROGBUF_TYPE_VAR_FLOAT64_ARRAY;
-  buf->size++;
-
-  write_var_size_t (buf, len, val_size, 0);
-  memcpy (buf->buffer + buf->size, arr, len_bytes);
-  buf->size += len_bytes;
-
-  return PROGBUF_SUCCESS;
-}
-
-int
-progbuf_get_double_array (progbuf_it_h iter, double **arr, size_t *len)
-{
-  if (!iter || !arr || !len)
-    return PROGBUF_ERROR_NULL_PARAM;
-
-  if (!iter->buf->buffer)
-    return PROGBUF_ERROR_NOT_OWNING;
-
-  if (iter->read_pos >= iter->buf->size)
-    return PROGBUF_ERROR_END_OF_ITER;
-
-  char val_type = iter->buf->buffer[iter->read_pos];
-
-  if ((val_type & PROGBUF_TYPE_VAR_FLOAT64_ARRAY)
-      != PROGBUF_TYPE_VAR_FLOAT64_ARRAY)
-    return PROGBUF_ERROR_UNEXPECTED_TYPE;
-
-  iter->read_pos++;
-
-  size_t u_len;
-  size_t prev_read_pos = iter->read_pos;
-  int negative;
-  if (read_var_size_t (iter, &u_len, &negative) != 0)
-    {
-      iter->read_pos--;
-      return PROGBUF_ERROR_READ;
-    }
-
-  const size_t len_bytes = u_len * sizeof (double);
-  double *l_arr = malloc (len_bytes);
-
-  if (!l_arr)
-    {
-      iter->read_pos -= (1 + iter->read_pos - prev_read_pos);
-      return PROGBUF_ERROR_MEM_ALLOC;
-    }
-
-  memcpy (l_arr, iter->buf->buffer + iter->read_pos, len_bytes);
-  iter->read_pos += len_bytes;
-
-  *arr = l_arr;
-  *len = u_len;
-
-  return PROGBUF_SUCCESS;
-}
+PROGBUF_FLOAT_ARRAY_GET (double, PROGBUF_TYPE_VAR_DOUBLE_ARRAY)
+PROGBUF_FLOAT_ARRAY_SET (double, PROGBUF_TYPE_VAR_DOUBLE_ARRAY)
 
 int
 progbuf_set_string (progbuf_h buf, const char *str)
@@ -902,106 +888,6 @@ progbuf_iter_reset (progbuf_it_h iter)
     return PROGBUF_ERROR_NOT_OWNING;
 
   iter->read_pos = iter->buf->header_size;
-
-  return PROGBUF_SUCCESS;
-}
-
-int
-progbuf_set_float (progbuf_h buf, float value)
-{
-  int ret;
-
-  if (!buf)
-    return PROGBUF_ERROR_NULL_PARAM;
-
-  if (!buf->buffer)
-    return PROGBUF_ERROR_NOT_OWNING;
-
-  ret = check_buffer_and_expand (buf, 5);
-  if (ret != 0)
-    return ret;
-
-  buf->buffer[buf->size] = PROGBUF_TYPE_FLOAT32;
-  buf->size++;
-
-  memcpy (buf->buffer + buf->size, &value, 4);
-  buf->size += 4;
-
-  return PROGBUF_SUCCESS;
-}
-
-int
-progbuf_get_float (progbuf_it_h iter, float *value)
-{
-  if (!iter || !value)
-    return PROGBUF_ERROR_NULL_PARAM;
-
-  if (!iter->buf->buffer)
-    return PROGBUF_ERROR_NOT_OWNING;
-
-  if (iter->read_pos >= iter->buf->size)
-    return PROGBUF_ERROR_END_OF_ITER;
-
-  char val_type = iter->buf->buffer[iter->read_pos];
-
-  if ((val_type & PROGBUF_TYPE_FLOAT32) != PROGBUF_TYPE_FLOAT32)
-    return PROGBUF_ERROR_UNEXPECTED_TYPE;
-
-  iter->read_pos++;
-
-  memcpy (value, iter->buf->buffer + iter->read_pos, 4);
-
-  iter->read_pos += 4;
-
-  return PROGBUF_SUCCESS;
-}
-
-int
-progbuf_set_double (progbuf_h buf, double value)
-{
-  int ret;
-
-  if (!buf)
-    return PROGBUF_ERROR_NULL_PARAM;
-
-  if (!buf->buffer)
-    return PROGBUF_ERROR_NOT_OWNING;
-
-  ret = check_buffer_and_expand (buf, 9);
-  if (ret != 0)
-    return ret;
-
-  buf->buffer[buf->size] = PROGBUF_TYPE_FLOAT64;
-  buf->size++;
-
-  memcpy (buf->buffer + buf->size, &value, 8);
-  buf->size += 8;
-
-  return PROGBUF_SUCCESS;
-}
-
-int
-progbuf_get_double (progbuf_it_h iter, double *value)
-{
-  if (!iter || !value)
-    return PROGBUF_ERROR_NULL_PARAM;
-
-  if (!iter->buf->buffer)
-    return PROGBUF_ERROR_NOT_OWNING;
-
-  if (iter->read_pos >= iter->buf->size)
-    return PROGBUF_ERROR_END_OF_ITER;
-
-  char val_type = iter->buf->buffer[iter->read_pos];
-
-  if ((val_type & PROGBUF_TYPE_FLOAT64) != PROGBUF_TYPE_FLOAT64)
-    return PROGBUF_ERROR_UNEXPECTED_TYPE;
-
-  iter->read_pos++;
-
-  memcpy (value, iter->buf->buffer + iter->read_pos, 8);
-
-  iter->read_pos += 8;
 
   return PROGBUF_SUCCESS;
 }
