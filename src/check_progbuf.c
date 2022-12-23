@@ -350,7 +350,7 @@ START_TEST (test_progbuf_load_from_buffer)
 
   ck_assert (iter_internal->read_pos == 4);
 
-  char *buffer;
+  void *buffer;
   progbuf_own_buffer (buf, &buffer, &size);
 
   ck_assert (buffer);

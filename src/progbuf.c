@@ -557,7 +557,7 @@ progbuf_alloc (long message_tag)
 }
 
 progbuf_h
-progbuf_from_buffer (char *buffer, size_t size)
+progbuf_from_buffer (void *buffer, size_t size)
 {
   if (!buffer || size == 0)
     return 0;
@@ -657,7 +657,7 @@ progbuf_message_tag (progbuf_h buf, long *message_tag)
 }
 
 int
-progbuf_own_buffer (progbuf_h buf, char **buffer, size_t *size)
+progbuf_own_buffer (progbuf_h buf, void **buffer, size_t *size)
 {
   if (!buf || !buffer || !size)
     return PROGBUF_ERROR_NULL_PARAM;
@@ -674,7 +674,7 @@ progbuf_own_buffer (progbuf_h buf, char **buffer, size_t *size)
 }
 
 int
-progbuf_copy_buffer (progbuf_h buf, char **buffer, size_t *size)
+progbuf_copy_buffer (progbuf_h buf, void **buffer, size_t *size)
 {
   if (!buf || !buffer || !size)
     return PROGBUF_ERROR_NULL_PARAM;
