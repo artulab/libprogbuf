@@ -506,7 +506,8 @@ progbuf_set_float_array (progbuf_h buf, const float *arr, size_t len)
     return PROGBUF_ERROR_NOT_OWNING;
 
   val_size = determine_var_size_t_size (len);
-  ret = check_buffer_and_expand (buf, val_size + 1);
+  const size_t len_bytes = len * sizeof (float);
+  ret = check_buffer_and_expand (buf, 1 + val_size + len_bytes);
   if (ret != 0)
     return ret;
 
@@ -514,21 +515,8 @@ progbuf_set_float_array (progbuf_h buf, const float *arr, size_t len)
   buf->size++;
 
   write_var_size_t (buf, len, val_size, 0);
-
-  for (size_t i = 0; i < len; ++i)
-    {
-      float value = arr[i];
-      ret = check_buffer_and_expand (buf, 4);
-
-      if (ret != 0)
-        {
-          buf->size -= (1 + val_size + (i * 4));
-          return ret;
-        }
-
-      memcpy (buf->buffer + buf->size, &value, 4);
-      buf->size += 4;
-    }
+  memcpy (buf->buffer + buf->size, arr, len_bytes);
+  buf->size += len_bytes;
 
   return PROGBUF_SUCCESS;
 }
@@ -562,7 +550,8 @@ progbuf_get_float_array (progbuf_it_h iter, float **arr, size_t *len)
       return PROGBUF_ERROR_READ;
     }
 
-  float *l_arr = malloc (sizeof (float) * u_len);
+  const size_t len_bytes = u_len * sizeof (float);
+  float *l_arr = malloc (len_bytes);
 
   if (!l_arr)
     {
@@ -570,13 +559,8 @@ progbuf_get_float_array (progbuf_it_h iter, float **arr, size_t *len)
       return PROGBUF_ERROR_MEM_ALLOC;
     }
 
-  float value;
-  for (size_t i = 0; i < u_len; ++i)
-    {
-      memcpy (&value, iter->buf->buffer + iter->read_pos, 4);
-      l_arr[i] = value;
-      iter->read_pos += 4;
-    }
+  memcpy (l_arr, iter->buf->buffer + iter->read_pos, len_bytes);
+  iter->read_pos += len_bytes;
 
   *arr = l_arr;
   *len = u_len;
@@ -596,7 +580,8 @@ progbuf_set_double_array (progbuf_h buf, const double *arr, size_t len)
     return PROGBUF_ERROR_NOT_OWNING;
 
   val_size = determine_var_size_t_size (len);
-  ret = check_buffer_and_expand (buf, val_size + 1);
+  const size_t len_bytes = len * sizeof (double);
+  ret = check_buffer_and_expand (buf, 1 + val_size + len_bytes);
   if (ret != 0)
     return ret;
 
@@ -604,21 +589,8 @@ progbuf_set_double_array (progbuf_h buf, const double *arr, size_t len)
   buf->size++;
 
   write_var_size_t (buf, len, val_size, 0);
-
-  for (size_t i = 0; i < len; ++i)
-    {
-      double value = arr[i];
-      ret = check_buffer_and_expand (buf, 8);
-
-      if (ret != 0)
-        {
-          buf->size -= (1 + val_size + (i * 8));
-          return ret;
-        }
-
-      memcpy (buf->buffer + buf->size, &value, 8);
-      buf->size += 8;
-    }
+  memcpy (buf->buffer + buf->size, arr, len_bytes);
+  buf->size += len_bytes;
 
   return PROGBUF_SUCCESS;
 }
@@ -652,7 +624,8 @@ progbuf_get_double_array (progbuf_it_h iter, double **arr, size_t *len)
       return PROGBUF_ERROR_READ;
     }
 
-  double *l_arr = malloc (sizeof (double) * u_len);
+  const size_t len_bytes = u_len * sizeof (double);
+  double *l_arr = malloc (len_bytes);
 
   if (!l_arr)
     {
@@ -660,16 +633,83 @@ progbuf_get_double_array (progbuf_it_h iter, double **arr, size_t *len)
       return PROGBUF_ERROR_MEM_ALLOC;
     }
 
-  double value;
-  for (size_t i = 0; i < u_len; ++i)
-    {
-      memcpy (&value, iter->buf->buffer + iter->read_pos, 8);
-      l_arr[i] = value;
-      iter->read_pos += 8;
-    }
+  memcpy (l_arr, iter->buf->buffer + iter->read_pos, len_bytes);
+  iter->read_pos += len_bytes;
 
   *arr = l_arr;
   *len = u_len;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
+progbuf_set_string (progbuf_h buf, const char *str)
+{
+  int val_size, ret;
+
+  if (!buf || !str)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  size_t len = strlen (str) + 1;
+  val_size = determine_var_size_t_size (len);
+  ret = check_buffer_and_expand (buf, 1 + val_size + len);
+  if (ret != 0)
+    return ret;
+
+  buf->buffer[buf->size] = PROGBUF_TYPE_STRING;
+  buf->size++;
+
+  write_var_size_t (buf, len, val_size, 0);
+
+  memcpy (buf->buffer + buf->size, str, len);
+  buf->size += len;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
+progbuf_get_string (progbuf_it_h iter, char **str)
+{
+  if (!iter || !str)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!iter->buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  if (iter->read_pos >= iter->buf->size)
+    return PROGBUF_ERROR_END_OF_ITER;
+
+  char val_type = iter->buf->buffer[iter->read_pos];
+
+  if ((val_type & PROGBUF_TYPE_STRING) != PROGBUF_TYPE_STRING)
+    return PROGBUF_ERROR_UNEXPECTED_TYPE;
+
+  iter->read_pos++;
+
+  size_t str_len;
+  size_t prev_read_pos = iter->read_pos;
+  int negative;
+  if (read_var_size_t (iter, &str_len, &negative) != 0)
+    {
+      iter->read_pos--;
+      return PROGBUF_ERROR_READ;
+    }
+
+  char *str_buf = malloc (str_len);
+
+  if (!str_buf)
+    {
+      iter->read_pos -= (1 + iter->read_pos - prev_read_pos);
+      return PROGBUF_ERROR_MEM_ALLOC;
+    }
+
+  memcpy (str_buf, iter->buf->buffer + iter->read_pos, str_len);
+  iter->read_pos += str_len;
+
+  *str = str_buf;
 
   return PROGBUF_SUCCESS;
 }

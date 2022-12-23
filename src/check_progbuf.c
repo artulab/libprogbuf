@@ -550,6 +550,155 @@ START_TEST (test_progbuf_write_read_int_array)
 }
 END_TEST
 
+START_TEST (test_progbuf_write_read_float_array)
+{
+  progbuf_h buf = progbuf_alloc (1);
+
+  ck_assert (buf);
+
+  const float val[] = { FLT_MIN, FLT_MAX };
+  const size_t actual_size = 2;
+
+  int ret = progbuf_set_float_array (buf, val, actual_size);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+
+  ret = progbuf_buffer_size (buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ck_assert (size == 11);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  float *p_val;
+  size_t p_size;
+  ret = progbuf_get_float_array (iter, &p_val, &p_size);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (p_val);
+  ck_assert (p_size == actual_size);
+
+  for (int i = 0; i < actual_size; ++i)
+    {
+      ck_assert (val[i] == p_val[i]);
+    }
+
+  struct progbuf_it_s *iter_internal = iter;
+
+  ck_assert (iter_internal->read_pos == 11);
+
+  free (p_val);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+END_TEST
+
+START_TEST (test_progbuf_write_read_double_array)
+{
+  progbuf_h buf = progbuf_alloc (1);
+
+  ck_assert (buf);
+
+  const double val[] = { DBL_MIN, DBL_MAX };
+  const size_t actual_size = 2;
+
+  int ret = progbuf_set_double_array (buf, val, actual_size);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+
+  ret = progbuf_buffer_size (buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ck_assert (size == 19);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  double *p_val;
+  size_t p_size;
+  ret = progbuf_get_double_array (iter, &p_val, &p_size);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (p_val);
+  ck_assert (p_size == actual_size);
+
+  for (int i = 0; i < actual_size; ++i)
+    {
+      ck_assert (val[i] == p_val[i]);
+    }
+
+  struct progbuf_it_s *iter_internal = iter;
+
+  ck_assert (iter_internal->read_pos == 19);
+
+  free (p_val);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+END_TEST
+
+START_TEST (test_progbuf_write_read_string)
+{
+  progbuf_h buf = progbuf_alloc (1);
+
+  ck_assert (buf);
+
+  const char *val = "abcdefghij";
+  const size_t actual_size = 10;
+
+  int ret = progbuf_set_string (buf, val);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+
+  ret = progbuf_buffer_size (buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ck_assert (size == actual_size + 1 + 3);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  char *p_val;
+  size_t p_size;
+  ret = progbuf_get_string (iter, &p_val);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (p_val);
+  ck_assert (strlen (val) == strlen (p_val));
+  ck_assert (strcmp (val, p_val) == 0);
+
+  struct progbuf_it_s *iter_internal = iter;
+
+  ck_assert (iter_internal->read_pos == actual_size + 1 + 3);
+
+  free (p_val);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+END_TEST
+
 START_TEST (test_progbuf_write_read_multiple_arrays)
 {
   progbuf_h buf = progbuf_alloc (1);
@@ -667,6 +816,9 @@ progbuf_suite (void)
 
   tc_array = tcase_create ("encode_array");
   tcase_add_test (tc_array, test_progbuf_write_read_int_array);
+  tcase_add_test (tc_array, test_progbuf_write_read_float_array);
+  tcase_add_test (tc_array, test_progbuf_write_read_double_array);
+  tcase_add_test (tc_array, test_progbuf_write_read_string);
   tcase_add_test (tc_array, test_progbuf_write_read_multiple_arrays);
 
   suite_add_tcase (s, tc_basic);

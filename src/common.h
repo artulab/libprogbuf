@@ -10,11 +10,12 @@
 #define PROGBUF_TYPE_VAR_INT            0x01
 #define PROGBUF_TYPE_FLOAT32            0x02
 #define PROGBUF_TYPE_FLOAT64            0x03
-#define PROGBUF_TYPE_BYTE               0x04
+#define PROGBUF_TYPE_CHAR               0x04
 #define PROGBUF_TYPE_ARRAY              0x10
 #define PROGBUF_TYPE_VAR_INT_ARRAY      0x11
 #define PROGBUF_TYPE_VAR_FLOAT32_ARRAY  0x12
 #define PROGBUF_TYPE_VAR_FLOAT64_ARRAY  0x13
+#define PROGBUF_TYPE_STRING             0x14
 
 struct progbuf_s
 {
