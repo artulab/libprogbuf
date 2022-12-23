@@ -26,6 +26,7 @@ src/.libs/
 src/Makefile
 src/libprogbuf.la
 src/libprogbuf.lo
+src/libprogbuf_la-progbuf.lo
 src/*.o
 src/check_progbuf
 src/check_progbuf.log
