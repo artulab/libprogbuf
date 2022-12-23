@@ -1,5 +1,6 @@
 #include <check.h>
 #include <float.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -549,6 +550,93 @@ START_TEST (test_progbuf_write_read_int_array)
 }
 END_TEST
 
+START_TEST (test_progbuf_write_read_multiple_arrays)
+{
+  progbuf_h buf = progbuf_alloc (1);
+
+  ck_assert (buf);
+
+  const long val_long[] = { LONG_MAX, LONG_MIN };
+  const size_t size_long = 2;
+
+  int ret = progbuf_set_long_array (buf, val_long, size_long);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  const unsigned long val_ulong[] = { ULONG_MAX, 0, 10 };
+  const size_t size_ulong = 3;
+
+  ret = progbuf_set_ulong_array (buf, val_ulong, size_ulong);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  /* get long array and test */
+  long *actual_val_long;
+  size_t actual_size_long;
+  ret = progbuf_get_long_array (iter, &actual_val_long, &actual_size_long);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (actual_val_long);
+  ck_assert (size_long == actual_size_long);
+
+  for (int i = 0; i < size_long; ++i)
+    {
+      ck_assert (val_long[i] == actual_val_long[i]);
+    }
+
+  free (actual_val_long);
+
+  /* get unsinged long array and test */
+
+  unsigned long *actual_val_ulong;
+  size_t actual_size_ulong;
+  ret = progbuf_get_ulong_array (iter, &actual_val_ulong, &actual_size_ulong);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (actual_val_ulong);
+  ck_assert (size_ulong == actual_size_ulong);
+
+  for (int i = 0; i < size_ulong; ++i)
+    {
+      ck_assert (val_ulong[i] == actual_val_ulong[i]);
+    }
+
+  free (actual_val_ulong);
+
+  /* try to get inexistent array data */
+  ret = progbuf_get_ulong_array (iter, &actual_val_ulong, &actual_size_ulong);
+  ck_assert (PROGBUF_ERROR_END_OF_ITER == ret);
+
+  /* add one long long data and read it */
+  ret = progbuf_set_longlong (buf, LLONG_MAX);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  /* try to get wrong type of data */
+  float float_value;
+  ret = progbuf_get_float (iter, &float_value);
+  ck_assert (PROGBUF_ERROR_UNEXPECTED_TYPE == ret);
+
+  /* now get long long value which is of correct type */
+  long long llong_value;
+  ret = progbuf_get_longlong (iter, &llong_value);
+  ck_assert (llong_value == LLONG_MAX);
+
+  /* try to get inexistent data again */
+  ret = progbuf_get_longlong (iter, &llong_value);
+  ck_assert (PROGBUF_ERROR_END_OF_ITER == ret);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+END_TEST
+
 static Suite *
 progbuf_suite (void)
 {
@@ -579,6 +667,7 @@ progbuf_suite (void)
 
   tc_array = tcase_create ("encode_array");
   tcase_add_test (tc_array, test_progbuf_write_read_int_array);
+  tcase_add_test (tc_array, test_progbuf_write_read_multiple_arrays);
 
   suite_add_tcase (s, tc_basic);
   suite_add_tcase (s, tc_long);
