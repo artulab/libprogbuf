@@ -699,6 +699,53 @@ START_TEST (test_progbuf_write_read_string)
 }
 END_TEST
 
+START_TEST (test_progbuf_write_read_raw_data)
+{
+  progbuf_h buf = progbuf_alloc (1);
+
+  ck_assert (buf);
+
+  const char val[] = { 1, 2, 3, 4, 5 };
+  const size_t actual_size = 5;
+
+  int ret = progbuf_set_raw_data (buf, val, actual_size);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+
+  ret = progbuf_buffer_size (buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ck_assert (size == actual_size + 3);
+
+  progbuf_it_h iter = progbuf_iter_alloc (buf);
+
+  ck_assert (iter);
+
+  void *p_val = 0;
+  size_t p_size;
+  ret = progbuf_get_raw_data (iter, &p_val, &p_size);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (p_val);
+  ck_assert (actual_size == p_size);
+  ck_assert (memcmp (val, p_val, actual_size) == 0);
+
+  struct progbuf_it_s *iter_internal = iter;
+
+  ck_assert (iter_internal->read_pos == actual_size + 3);
+
+  free (p_val);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+END_TEST
+
 START_TEST (test_progbuf_write_read_multiple_arrays)
 {
   progbuf_h buf = progbuf_alloc (1);
@@ -819,6 +866,7 @@ progbuf_suite (void)
   tcase_add_test (tc_array, test_progbuf_write_read_float_array);
   tcase_add_test (tc_array, test_progbuf_write_read_double_array);
   tcase_add_test (tc_array, test_progbuf_write_read_string);
+  tcase_add_test (tc_array, test_progbuf_write_read_raw_data);
   tcase_add_test (tc_array, test_progbuf_write_read_multiple_arrays);
 
   suite_add_tcase (s, tc_basic);
