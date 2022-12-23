@@ -50,6 +50,27 @@ int progbuf_get_double (progbuf_it_h iter, double *value);
 
 int progbuf_set_int_array (progbuf_h buf, const int *arr, size_t len);
 int progbuf_get_int_array (progbuf_it_h iter, int **arr, size_t *len);
+int progbuf_set_uint_array (progbuf_h buf, const unsigned int *arr, size_t len);
+int progbuf_get_uint_array (progbuf_it_h iter, unsigned int **arr, size_t *len);
+
+int progbuf_set_long_array (progbuf_h buf, const long *arr, size_t len);
+int progbuf_get_long_array (progbuf_it_h iter, long **arr, size_t *len);
+int progbuf_set_ulong_array (progbuf_h buf, const unsigned long *arr, size_t len);
+int progbuf_get_ulong_array (progbuf_it_h iter, unsigned long **arr, size_t *len);
+
+int progbuf_set_longlong_array (progbuf_h buf, const long long *arr, size_t len);
+int progbuf_get_longlong_array (progbuf_it_h iter, long long **arr, size_t *len);
+int progbuf_set_ulonglong_array (progbuf_h buf, const unsigned long long *arr, size_t len);
+int progbuf_get_ulonglong_array (progbuf_it_h iter, unsigned long long **arr, size_t *len);
+
+int progbuf_set_size_t_array (progbuf_h buf, const size_t *arr, size_t len);
+int progbuf_get_size_t_array (progbuf_it_h iter, size_t **arr, size_t *len);
+
+int progbuf_set_float_array (progbuf_h buf, const float *arr, size_t len);
+int progbuf_get_float_array (progbuf_it_h iter, float **arr, size_t *len);
+
+int progbuf_set_double_array (progbuf_h buf, const double *arr, size_t len);
+int progbuf_get_double_array (progbuf_it_h iter, double **arr, size_t *len);
 
 progbuf_it_h progbuf_iter_alloc (progbuf_h buf);
 int progbuf_iter_free (progbuf_it_h iter);
