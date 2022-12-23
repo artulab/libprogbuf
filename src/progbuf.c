@@ -629,6 +629,77 @@ PROGBUF_FLOAT_ARRAY_GET (double, PROGBUF_TYPE_VAR_DOUBLE_ARRAY)
 PROGBUF_FLOAT_ARRAY_SET (double, PROGBUF_TYPE_VAR_DOUBLE_ARRAY)
 
 int
+progbuf_set_raw_data (progbuf_h buf, const void *ptr, size_t len)
+{
+  int val_size, ret;
+
+  if (!buf || !ptr)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  val_size = determine_var_size_t_size (len);
+  ret = check_buffer_and_expand (buf, 1 + val_size + len);
+  if (ret != 0)
+    return ret;
+
+  buf->buffer[buf->size] = PROGBUF_TYPE_RAW;
+  buf->size++;
+
+  write_var_size_t (buf, len, val_size, 0);
+  memcpy (buf->buffer + buf->size, ptr, len);
+  buf->size += len;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
+progbuf_get_raw_data (progbuf_it_h iter, void **ptr, size_t *len)
+{
+  if (!iter || !ptr || !len)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!iter->buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  if (iter->read_pos >= iter->buf->size)
+    return PROGBUF_ERROR_END_OF_ITER;
+
+  char val_type = iter->buf->buffer[iter->read_pos];
+
+  if ((val_type & PROGBUF_TYPE_RAW) != PROGBUF_TYPE_RAW)
+    return PROGBUF_ERROR_UNEXPECTED_TYPE;
+
+  iter->read_pos++;
+
+  size_t u_len;
+  size_t prev_read_pos = iter->read_pos;
+  int negative;
+  if (read_var_size_t (iter, &u_len, &negative) != 0)
+    {
+      iter->read_pos--;
+      return PROGBUF_ERROR_READ;
+    }
+
+  void *l_ptr = malloc (u_len);
+
+  if (!l_ptr)
+    {
+      iter->read_pos -= (1 + iter->read_pos - prev_read_pos);
+      return PROGBUF_ERROR_MEM_ALLOC;
+    }
+
+  memcpy (l_ptr, iter->buf->buffer + iter->read_pos, u_len);
+  iter->read_pos += u_len;
+
+  *ptr = l_ptr;
+  *len = u_len;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
 progbuf_set_string (progbuf_h buf, const char *str)
 {
   int val_size, ret;

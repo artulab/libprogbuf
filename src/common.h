@@ -11,6 +11,7 @@
 #define PROGBUF_TYPE_FLOAT              0x02
 #define PROGBUF_TYPE_DOUBLE             0x03
 #define PROGBUF_TYPE_CHAR               0x04
+#define PROGBUF_TYPE_RAW                0x05
 #define PROGBUF_TYPE_ARRAY              0x10
 #define PROGBUF_TYPE_VAR_INT_ARRAY      0x11
 #define PROGBUF_TYPE_VAR_FLOAT_ARRAY    0x12
