@@ -700,6 +700,99 @@ progbuf_get_raw_data (progbuf_it_h iter, void **ptr, size_t *len)
 }
 
 int
+progbuf_set_message (progbuf_h buf, const progbuf_h message)
+{
+  int val_size, ret;
+
+  if (!buf || !message)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!buf->buffer || !message->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  val_size = determine_var_size_t_size (message->size);
+  ret = check_buffer_and_expand (buf, 1 + val_size + message->size);
+  if (ret != 0)
+    return ret;
+
+  buf->buffer[buf->size] = PROGBUF_TYPE_MESSAGE;
+  buf->size++;
+
+  write_var_size_t (buf, message->size, val_size, 0);
+  memcpy (buf->buffer + buf->size, message->buffer, message->size);
+  buf->size += message->size;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
+progbuf_get_message (progbuf_it_h iter, progbuf_h *message)
+{
+  if (!iter || !message)
+    return PROGBUF_ERROR_NULL_PARAM;
+
+  if (!iter->buf->buffer)
+    return PROGBUF_ERROR_NOT_OWNING;
+
+  if (iter->read_pos >= iter->buf->size)
+    return PROGBUF_ERROR_END_OF_ITER;
+
+  char val_type = iter->buf->buffer[iter->read_pos];
+
+  if ((val_type & PROGBUF_TYPE_MESSAGE) != PROGBUF_TYPE_MESSAGE)
+    return PROGBUF_ERROR_UNEXPECTED_TYPE;
+
+  iter->read_pos++;
+
+  size_t size;
+  size_t prev_read_pos = iter->read_pos;
+  int negative;
+  if (read_var_size_t (iter, &size, &negative) != 0)
+    {
+      iter->read_pos--;
+      return PROGBUF_ERROR_READ;
+    }
+
+  void *buffer = malloc (size);
+
+  if (!buffer)
+    {
+      iter->read_pos -= (1 + iter->read_pos - prev_read_pos);
+      return PROGBUF_ERROR_MEM_ALLOC;
+    }
+
+  memcpy (buffer, iter->buf->buffer + iter->read_pos, size);
+  iter->read_pos += size;
+
+  ulong message_tag;
+
+  struct progbuf_s *buf = malloc (sizeof (struct progbuf_s));
+  buf->buffer = buffer;
+
+  struct progbuf_it_s tag_iter;
+  tag_iter.buf = buf;
+  tag_iter.read_pos = 0;
+
+  if (read_var_ulong (&tag_iter, &message_tag, &negative) != 0)
+    {
+      iter->read_pos -= (1 + size + iter->read_pos - prev_read_pos);
+      free (buffer);
+      free (buf);
+      return PROGBUF_ERROR_READ;
+    }
+
+  buf->message_tag = (negative ? -message_tag : message_tag);
+  buf->header_size = determine_var_ulong_size (ABS (buf->message_tag));
+
+  buf->size = size;
+  buf->capacity = size;
+
+  *message = buf;
+
+  return PROGBUF_SUCCESS;
+}
+
+int
 progbuf_set_string (progbuf_h buf, const char *str)
 {
   int val_size, ret;

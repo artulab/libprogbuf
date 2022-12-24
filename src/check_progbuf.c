@@ -833,11 +833,119 @@ START_TEST (test_progbuf_write_read_multiple_arrays)
 }
 END_TEST
 
+START_TEST (test_progbuf_write_read_message)
+{
+  int ret;
+
+  progbuf_h buf = progbuf_alloc (7);
+  ck_assert (buf);
+
+  ret = progbuf_set_float (buf, FLT_MAX);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_set_float (buf, FLT_MIN);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  progbuf_h container_buf = progbuf_alloc (11);
+  ck_assert (container_buf);
+
+  ret = progbuf_set_int (container_buf, 17);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_set_message (container_buf, buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_set_int (container_buf, 21);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  size_t size;
+  ret = progbuf_buffer_size (container_buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (size == 18);
+
+  progbuf_it_h iter = progbuf_iter_alloc (container_buf);
+  ck_assert (iter);
+
+  long message_tag;
+  ret = progbuf_message_tag (container_buf, &message_tag);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (message_tag == 11);
+
+  int i_value;
+  ret = progbuf_get_int (iter, &i_value);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (i_value == 17);
+
+  progbuf_h nested_buf;
+  ret = progbuf_get_message (iter, &nested_buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_get_int (iter, &i_value);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (i_value == 21);
+
+  ret = progbuf_iter_free (iter);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_buffer_size (nested_buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (size == 11);
+
+  ret = progbuf_message_tag (nested_buf, &message_tag);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (message_tag == 7);
+
+  /* let's extend the nested message now*/
+  ret = progbuf_set_int (nested_buf, 23);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_buffer_size (nested_buf, &size);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (size == 13);
+
+  progbuf_it_h iter_nested = progbuf_iter_alloc (nested_buf);
+  ck_assert (iter_nested);
+
+  float float_value;
+  ret = progbuf_get_float (iter_nested, &float_value);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (float_value == FLT_MAX);
+
+  ret = progbuf_get_float (iter_nested, &float_value);
+
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (float_value == FLT_MIN);
+
+  ret = progbuf_get_float (iter_nested, &float_value);
+  ck_assert (ret == PROGBUF_ERROR_UNEXPECTED_TYPE);
+
+  ret = progbuf_get_int (iter_nested, &i_value);
+  ck_assert (ret == PROGBUF_SUCCESS);
+  ck_assert (i_value == 23);
+
+  struct progbuf_it_s *iter_internal = iter_nested;
+  ck_assert (iter_internal->read_pos == 13);
+
+  ret = progbuf_iter_free (iter_nested);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (nested_buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+
+  ret = progbuf_free (container_buf);
+  ck_assert (ret == PROGBUF_SUCCESS);
+}
+
 static Suite *
 progbuf_suite (void)
 {
   Suite *s;
-  TCase *tc_basic, *tc_long, *tc_longlong, *tc_load, *tc_float, *tc_array;
+  TCase *tc_basic, *tc_long, *tc_longlong, *tc_load, *tc_float, *tc_array,
+      *tc_message;
 
   s = suite_create ("progbuf test suite");
 
@@ -869,12 +977,16 @@ progbuf_suite (void)
   tcase_add_test (tc_array, test_progbuf_write_read_raw_data);
   tcase_add_test (tc_array, test_progbuf_write_read_multiple_arrays);
 
+  tc_message = tcase_create ("encode_message");
+  tcase_add_test (tc_message, test_progbuf_write_read_message);
+
   suite_add_tcase (s, tc_basic);
   suite_add_tcase (s, tc_long);
   suite_add_tcase (s, tc_longlong);
   suite_add_tcase (s, tc_load);
   suite_add_tcase (s, tc_float);
   suite_add_tcase (s, tc_array);
+  suite_add_tcase (s, tc_message);
 
   return s;
 }

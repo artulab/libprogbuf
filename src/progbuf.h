@@ -54,6 +54,9 @@ int progbuf_get_string (progbuf_it_h iter, char **str);
 int progbuf_set_raw_data (progbuf_h buf, const void *ptr, size_t len);
 int progbuf_get_raw_data (progbuf_it_h iter, void **ptr, size_t *len);
 
+int progbuf_set_message (progbuf_h buf, const progbuf_h message);
+int progbuf_get_message (progbuf_it_h iter, progbuf_h *message);
+
 int progbuf_set_int_array (progbuf_h buf, const int *arr, size_t len);
 int progbuf_get_int_array (progbuf_it_h iter, int **arr, size_t *len);
 int progbuf_set_uint_array (progbuf_h buf, const unsigned int *arr, size_t len);
