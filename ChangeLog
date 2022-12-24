@@ -1,0 +1,16 @@
+- (2022-12-24) Add a script to generate a ChangeLog file
+- (2022-12-23) Add getter and setter to support nested message
+- (2022-12-23) Add a unit test for raw getter and setter functions
+- (2022-12-23) Add getter and setter for raw pointer data
+- (2022-12-23) Have macros for float/double getters and setters
+- (2022-12-23) Add string getter and setter; improve float and double functions
+- (2022-12-23) Add tests for array functions
+- (2022-12-23) Enable all warnings and fix the errors
+- (2022-12-22) Use void* as parameter type in buffer-related functions
+- (2022-12-22) Add getter and setter functions for other array types
+- (2022-12-22) Add setter and getter functions for int array
+- (2022-12-21) Add floating-point getters and setters
+- (2022-12-21) Have a function to load progbuf from a user buffer
+- (2022-12-21) Add buffer own and copy functions
+- (2022-12-21) Add basic APIs including var_int32 getter and setters
+- (2022-12-15) Init project
