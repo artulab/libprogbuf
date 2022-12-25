@@ -1,3 +1,4 @@
+- (2022-12-25) Generate pkg-config file
 - (2022-12-24) Add a script to generate a ChangeLog file
 - (2022-12-23) Add getter and setter to support nested message
 - (2022-12-23) Add a unit test for raw getter and setter functions

@@ -33,6 +33,7 @@ src/check_progbuf.log
 src/check_progbuf.trs
 src/progbuf.lo
 src/test-suite.log
+src/libprogbuf.pc
 test-driver
 stamp-h1
 .vscode/

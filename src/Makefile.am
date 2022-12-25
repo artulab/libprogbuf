@@ -1,8 +1,10 @@
 lib_LTLIBRARIES = libprogbuf.la
 libprogbuf_la_SOURCES = progbuf.c
-libprogbuf_la_LDFLAGS = -version-info 0:1:0
+libprogbuf_la_LDFLAGS = -version-info 1:0:0
 libprogbuf_la_CFLAGS = -Wall -Wextra -Wpedantic -Werror
-include_HEADERS = progbuf.h
+
+pkginclude_HEADERS = progbuf.h
+pkgconfig_DATA = libprogbuf.pc
 
 noinst_PROGRAMS = check_progbuf
 TESTS = check_progbuf
