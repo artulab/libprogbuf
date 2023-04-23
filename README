@@ -1,0 +1,58 @@
+C library to serialize versioned structured data, performing fast variable-length encoding for integers to reduce message size.
+
+Examples ================================================
+
+=== Serialize a message with payload containing an integer, an unsigned long long, a float, an integer array and a string with message tag 1 into a buffer ===
+
+// create a message buffer with tag 1
+
+int message_tag = 1;
+progbuf_h buf = progbuf_alloc (message_tag);
+
+// serialize a long value
+
+long long_val = 10;
+int ret = progbuf_set_long (buf, long_val);
+assert (ret == PROGBUF_SUCCESS);
+
+// serialize an unsigned long long value
+
+unsigned long long ulonglong_val = 0xFFFFFFFFFFFFFFFF;
+ret = progbuf_set_ulonglong (buf, ulonglong_val);
+assert (ret == PROGBUF_SUCCESS);
+
+// serialize a float value
+
+float float_val = 1.123;
+ret = progbuf_set_float (buf, float_val);
+assert (ret == PROGBUF_SUCCESS);
+
+// serialize an integer array
+
+const int intarr_val[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+const size_t intarr_size = sizeof (intarr_val) / sizeof (int);
+ret = progbuf_set_int_array (buf, intarr_val, intarr_size);
+assert (ret == PROGBUF_SUCCESS);
+
+// serialize a string
+
+const char *string_val = "abcdefghij";
+ret = progbuf_set_string (buf, string_val);
+assert (ret == PROGBUF_SUCCESS);
+
+// get message size and buffer to send over network
+
+size_t message_size;
+void *message_buffer;
+ret = progbuf_own_buffer(buf, &message_buffer, &message_size);
+assert (ret == PROGBUF_SUCCESS);
+
+// free the memory 
+
+ret = progbuf_free (buf);
+assert (ret == PROGBUF_SUCCESS);
+
+========================================================
+
+See check_progbuf.c file for more code samples.
+
